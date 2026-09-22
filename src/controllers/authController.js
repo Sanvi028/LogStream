@@ -2,6 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createUser, findUserByEmail } from '../models/userModel.js';
 import { saveRefreshToken } from '../models/refreshTokenModel.js';
+import { saveRefreshToken, findRefreshToken, deleteRefreshToken } from '../models/refreshTokenModel.js';
+import { findUserById } from '../models/userModel.js';
+
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -70,6 +73,62 @@ export const login = async (req, res, next) => {
     const { password: _, ...userWithoutPassword } = user;
 
     res.status(201).json({ user: userWithoutPassword, accessToken, refreshToken });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getMe = async (req, res, next) => {
+  try {
+    res.json({ user: req.user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const refresh = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(401).json({ error: 'Refresh token required' });
+    }
+
+    const storedToken = await findRefreshToken(refreshToken);
+    if (!storedToken) {
+      return res.status(403).json({ error: 'Invalid refresh token' });
+    }
+
+    if (new Date(storedToken.expires_at) < new Date()) {
+      await deleteRefreshToken(refreshToken);
+      return res.status(403).json({ error: 'Refresh token expired' });
+    }
+
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err) => {
+      if (err) {
+        return res.status(403).json({ error: 'Invalid refresh token' });
+      }
+
+      const user = await findUserById(storedToken.user_id);
+      const newAccessToken = generateAccessToken(user);
+
+      res.json({ accessToken: newAccessToken });
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const logout = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token required' });
+    }
+
+    await deleteRefreshToken(refreshToken);
+    res.json({ message: 'Logged out successfully' });
   } catch (err) {
     next(err);
   }
