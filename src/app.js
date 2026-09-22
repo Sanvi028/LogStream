@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import pool from './config/db.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 
@@ -21,8 +22,8 @@ app.get('/db-test', async (req, res) => {
     res.status(500).json({ error: 'Database connection failed' });
   }
 });
-
 // error handler must be added LAST, after all routes
 app.use(errorHandler);
+app.use('/api/auth', authRoutes);
 
 export default app;
