@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createUser, findUserByEmail } from '../models/userModel.js';
-import { saveRefreshToken } from '../models/refreshTokenModel.js';
 import { saveRefreshToken, findRefreshToken, deleteRefreshToken } from '../models/refreshTokenModel.js';
 import { findUserById } from '../models/userModel.js';
 
