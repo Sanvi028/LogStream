@@ -1,5 +1,6 @@
 import kafka from '../config/kafka.js';
 import { insertLog } from '../models/logModel.js';
+import { indexLog } from './opensearchService.js';
 
 const consumer = kafka.consumer({ groupId: 'logstream-group' });
 
@@ -13,7 +14,9 @@ export const connectConsumer = async () => {
       const { service, level, message: logMessage, timestamp } = logData;
 
       await insertLog(service, level, logMessage, timestamp);
-      console.log('Log saved:', logData);
+      await indexLog({ service, level, message: logMessage, timestamp });
+
+      console.log('Log saved and indexed:', logData);
     },
   });
 

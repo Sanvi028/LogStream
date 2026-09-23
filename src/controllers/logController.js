@@ -1,4 +1,5 @@
 import { sendLog } from '../services/kafkaProducer.js';
+import { searchLogs } from '../services/opensearchService.js';
 
 export const ingestLog = async (req, res, next) => {
   try {
@@ -18,6 +19,16 @@ export const ingestLog = async (req, res, next) => {
     await sendLog(logData);
 
     res.status(202).json({ status: 'Log accepted', log: logData });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getLogs = async (req, res, next) => {
+  try {
+    const { query, service, level } = req.query;
+    const logs = await searchLogs({ query, service, level });
+    res.json({ logs });
   } catch (err) {
     next(err);
   }
