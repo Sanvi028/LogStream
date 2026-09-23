@@ -3,6 +3,7 @@ import cors from 'cors';
 import pool from './config/db.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/authRoutes.js';
+import logRoutes from './routes/logRoutes.js';
 
 const app = express();
 
@@ -25,5 +26,6 @@ app.get('/db-test', async (req, res) => {
 // error handler must be added LAST, after all routes
 app.use(errorHandler);
 app.use('/api/auth', authRoutes);
+app.use('/api/logs', logRoutes);
 
 export default app;

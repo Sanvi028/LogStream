@@ -1,0 +1,24 @@
+import { sendLog } from '../services/kafkaProducer.js';
+
+export const ingestLog = async (req, res, next) => {
+  try {
+    const { service, level, message } = req.body;
+
+    if (!service || !level || !message) {
+      return res.status(400).json({ error: 'service, level, and message are required' });
+    }
+
+    const logData = {
+      service,
+      level,
+      message,
+      timestamp: new Date().toISOString(),
+    };
+
+    await sendLog(logData);
+
+    res.status(202).json({ status: 'Log accepted', log: logData });
+  } catch (err) {
+    next(err);
+  }
+};
