@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
 import { useAuth } from "../context/AuthContext";
 
@@ -16,13 +16,20 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setIsSubmitting(true);
+
     try {
-      await login(email, password);
-      navigate("/dashboard");
+      await login(email.trim(), password);
+      navigate("/dashboard", { replace: true });
     } catch (err) {
-      const axiosErr = err as AxiosError<{ message?: string }>;
+      const axiosErr = err as AxiosError<{
+        error?: string;
+        message?: string;
+      }>;
+
       setError(
-        axiosErr.response?.data?.message || "Invalid email or password."
+        axiosErr.response?.data?.error ||
+          axiosErr.response?.data?.message ||
+          "Invalid email or password."
       );
     } finally {
       setIsSubmitting(false);
@@ -36,11 +43,22 @@ export default function LoginPage() {
 
         <div className="relative flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 backdrop-blur">
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white">
-              <path d="M4 6h16M4 12h10M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-5 w-5 text-white"
+            >
+              <path
+                d="M4 6h16M4 12h10M4 18h16"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </div>
-          <span className="text-lg font-semibold tracking-tight">LogStream</span>
+          <span className="text-lg font-semibold tracking-tight">
+            LogStream
+          </span>
         </div>
 
         <div className="relative space-y-4">
@@ -50,7 +68,8 @@ export default function LoginPage() {
             one place, live.
           </h1>
           <p className="max-w-sm text-indigo-100/80">
-            Centralized ingestion, real-time alerting, and search across every service — built for teams who can't afford to miss an incident.
+            Centralized ingestion, real-time alerting, and search across every
+            service — built for teams who can&apos;t afford to miss an incident.
           </p>
         </div>
 
@@ -64,15 +83,24 @@ export default function LoginPage() {
       <div className="flex w-full flex-col items-center justify-center px-6 lg:w-1/2">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
-            <span className="text-lg font-semibold tracking-tight text-white">LogStream</span>
+            <span className="text-lg font-semibold tracking-tight text-white">
+              LogStream
+            </span>
           </div>
 
           <h2 className="text-2xl font-semibold text-white">Welcome back</h2>
-          <p className="mt-1 text-sm text-slate-400">Sign in to view your logs and alerts.</p>
+          <p className="mt-1 text-sm text-slate-400">
+            Sign in to view your logs and alerts.
+          </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-300">Email</label>
+              <label
+                htmlFor="email"
+                className="mb-1.5 block text-sm font-medium text-slate-300"
+              >
+                Email
+              </label>
               <input
                 id="email"
                 type="email"
@@ -86,7 +114,12 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-300">Password</label>
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-sm font-medium text-slate-300"
+              >
+                Password
+              </label>
               <input
                 id="password"
                 type="password"
@@ -100,7 +133,10 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="rounded-lg border border-red-900/50 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300">
+              <div
+                role="alert"
+                className="rounded-lg border border-red-900/50 bg-red-950/50 px-3.5 py-2.5 text-sm text-red-300"
+              >
                 {error}
               </div>
             )}
@@ -110,14 +146,28 @@ export default function LoginPage() {
               disabled={isSubmitting}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />}
+              {isSubmitting && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              )}
               {isSubmitting ? "Signing in…" : "Sign in"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-slate-500">LogStream · Cloud-native log management</p>
+          <p className="mt-6 text-center text-sm text-slate-400">
+            Don&apos;t have an account?{" "}
+            <Link
+              to="/signup"
+              className="font-medium text-indigo-400 transition hover:text-indigo-300"
+            >
+              Sign up
+            </Link>
+          </p>
+
+          <p className="mt-4 text-center text-xs text-slate-500">
+            LogStream · Cloud-native log management
+          </p>
         </div>
       </div>
     </div>
   );
-}
+} 

@@ -1,9 +1,16 @@
+
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { createUser, findUserByEmail } from '../models/userModel.js';
-import { saveRefreshToken, findRefreshToken, deleteRefreshToken } from '../models/refreshTokenModel.js';
-import { findUserById } from '../models/userModel.js';
-
+import {
+  createUser,
+  findUserByEmail,
+  findUserById,
+} from '../models/userModel.js';
+import {
+  saveRefreshToken,
+  findRefreshToken,
+  deleteRefreshToken,
+} from '../models/refreshTokenModel.js';
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -14,7 +21,11 @@ const generateAccessToken = (user) => {
 };
 
 const generateRefreshToken = () => {
-  return jwt.sign({}, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return jwt.sign(
+    {},
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  );
 };
 
 export const register = async (req, res, next) => {
@@ -22,12 +33,17 @@ export const register = async (req, res, next) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+      return res.status(400).json({
+        error: 'Name, email, and password are required',
+      });
     }
 
     const existingUser = await findUserByEmail(email);
+
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({
+        error: 'Email already registered',
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -39,7 +55,11 @@ export const register = async (req, res, next) => {
 
     await saveRefreshToken(newUser.id, refreshToken, expiresAt);
 
-    res.status(201).json({ user: newUser, accessToken, refreshToken });
+    return res.status(201).json({
+      user: newUser,
+      accessToken,
+      refreshToken,
+    });
   } catch (err) {
     next(err);
   }
@@ -50,17 +70,35 @@ export const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      return res.status(400).json({
+        error: 'Email and password are required',
+      });
     }
 
     const user = await findUserByEmail(email);
+
+    console.log('[LOGIN DEBUG] User found:', Boolean(user));
+
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      console.log('[LOGIN DEBUG] No matching user found');
+      return res.status(401).json({
+        error: 'Invalid credentials',
+      });
     }
 
+    console.log(
+      '[LOGIN DEBUG] Password hash exists:',
+      Boolean(user.password)
+    );
+
     const isMatch = await bcrypt.compare(password, user.password);
+
+    console.log('[LOGIN DEBUG] Password matches:', isMatch);
+
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({
+        error: 'Invalid credentials',
+      });
     }
 
     const accessToken = generateAccessToken(user);
@@ -71,7 +109,11 @@ export const login = async (req, res, next) => {
 
     const { password: _, ...userWithoutPassword } = user;
 
-    res.status(201).json({ user: userWithoutPassword, accessToken, refreshToken });
+    return res.status(200).json({
+      user: userWithoutPassword,
+      accessToken,
+      refreshToken,
+    });
   } catch (err) {
     next(err);
   }
@@ -79,7 +121,7 @@ export const login = async (req, res, next) => {
 
 export const getMe = async (req, res, next) => {
   try {
-    res.json({ user: req.user });
+    return res.json({ user: req.user });
   } catch (err) {
     next(err);
   }
@@ -90,29 +132,56 @@ export const refresh = async (req, res, next) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(401).json({ error: 'Refresh token required' });
+      return res.status(401).json({
+        error: 'Refresh token required',
+      });
     }
 
     const storedToken = await findRefreshToken(refreshToken);
+
     if (!storedToken) {
-      return res.status(403).json({ error: 'Invalid refresh token' });
+      return res.status(403).json({
+        error: 'Invalid refresh token',
+      });
     }
 
     if (new Date(storedToken.expires_at) < new Date()) {
       await deleteRefreshToken(refreshToken);
-      return res.status(403).json({ error: 'Refresh token expired' });
+
+      return res.status(403).json({
+        error: 'Refresh token expired',
+      });
     }
 
-    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err) => {
-      if (err) {
-        return res.status(403).json({ error: 'Invalid refresh token' });
+    jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET,
+      async (err) => {
+        if (err) {
+          return res.status(403).json({
+            error: 'Invalid refresh token',
+          });
+        }
+
+        try {
+          const user = await findUserById(storedToken.user_id);
+
+          if (!user) {
+            return res.status(403).json({
+              error: 'User not found',
+            });
+          }
+
+          const newAccessToken = generateAccessToken(user);
+
+          return res.json({
+            accessToken: newAccessToken,
+          });
+        } catch (error) {
+          next(error);
+        }
       }
-
-      const user = await findUserById(storedToken.user_id);
-      const newAccessToken = generateAccessToken(user);
-
-      res.json({ accessToken: newAccessToken });
-    });
+    );
   } catch (err) {
     next(err);
   }
@@ -123,11 +192,16 @@ export const logout = async (req, res, next) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ error: 'Refresh token required' });
+      return res.status(400).json({
+        error: 'Refresh token required',
+      });
     }
 
     await deleteRefreshToken(refreshToken);
-    res.json({ message: 'Logged out successfully' });
+
+    return res.json({
+      message: 'Logged out successfully',
+    });
   } catch (err) {
     next(err);
   }
