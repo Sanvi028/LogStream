@@ -1,19 +1,21 @@
+
 export type LogLevel = "ERROR" | "WARN" | "INFO" | "DEBUG";
 
 export interface LogEntry {
-  id: string;
+  id?: string;
   service: string;
   level: LogLevel;
   message: string;
   metadata?: Record<string, unknown>;
-  createdAt: string; // ISO timestamp
+  timestamp?: string;
+  createdAt?: string;
 }
 
 export interface LogsResponse {
   logs: LogEntry[];
-  total: number;
-  page: number;
-  totalPages: number;
+  total?: number;
+  page?: number;
+  totalPages?: number;
 }
 
 export interface LogFilters {
