@@ -1,3 +1,4 @@
+
 import { mockLogs } from "./mockLogs";
 import type { AnalyticsSummary } from "../../types/log";
 
@@ -8,9 +9,18 @@ export function buildMockAnalytics(): AnalyticsSummary {
 
   // Bucket logs into hourly counts for the chart
   const buckets = new Map<string, number>();
+
   mockLogs.forEach((log) => {
-    const hour = new Date(log.createdAt);
+    const timestamp = log.createdAt ?? log.timestamp;
+
+    if (!timestamp) return;
+
+    const hour = new Date(timestamp);
+
+    if (Number.isNaN(hour.getTime())) return;
+
     hour.setMinutes(0, 0, 0);
+
     const key = hour.toISOString();
     buckets.set(key, (buckets.get(key) || 0) + 1);
   });
@@ -18,7 +28,10 @@ export function buildMockAnalytics(): AnalyticsSummary {
   const logsOverTime = Array.from(buckets.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([time, count]) => ({
-      time: new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      time: new Date(time).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       count,
     }));
 

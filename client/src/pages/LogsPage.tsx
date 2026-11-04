@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/logs/FilterBar";
@@ -31,8 +32,10 @@ export default function LogsPage() {
 
         const params: Record<string, string> = {};
 
-        if (filters.search.trim()) {
-          params.query = filters.search.trim();
+        const search = filters.search?.trim();
+
+        if (search) {
+          params.query = search;
         }
 
         if (filters.service) {
