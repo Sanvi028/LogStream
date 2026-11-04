@@ -3,9 +3,9 @@ import { io } from "socket.io-client";
 
 console.log("SOCKET FILE LOADED");
 
-const SOCKET_URL =
-  import.meta.env.VITE_API_URL?.replace(/\/api(?:\/v1)?\/?$/, "") ||
-  "http://localhost:5000";
+// Use the same origin as the frontend.
+// In Docker, Nginx forwards /socket.io/ to the backend.
+const SOCKET_URL = window.location.origin;
 
 console.log("SOCKET URL:", SOCKET_URL);
 

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import Layout from "../components/layout/Layout";
 import StatsCard from "../components/dashboard/StatsCard";
@@ -5,6 +6,7 @@ import LogsOverTimeChart from "../components/dashboard/LogsOverTimeCharts";
 import LogTable from "../components/logs/LogTable";
 import LogDetailModal from "../components/logs/LogDetailModal";
 import api from "../lib/api";
+import { socket } from "../lib/socket";
 import type { LogEntry, AnalyticsSummary } from "../types/log";
 
 const emptyAnalytics: AnalyticsSummary = {
@@ -25,35 +27,61 @@ export default function DashboardPage() {
   const [analyticsError, setAnalyticsError] = useState("");
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoadingLogs(true);
-        setLogsError("");
+    let active = true;
 
-        const response = await api.get("/logs/search");
-        setRecentLogs((response.data.logs ?? []).slice(0, 8));
-      } catch (error) {
-        console.error("Failed to fetch logs:", error);
-        setLogsError("Could not load logs. Please try again.");
-      } finally {
-        setLoadingLogs(false);
+    const fetchDashboardData = async (showLoading = false) => {
+      if (showLoading && active) {
+        setLoadingLogs(true);
+        setLoadingAnalytics(true);
       }
 
-      try {
-        setLoadingAnalytics(true);
+      if (active) {
+        setLogsError("");
         setAnalyticsError("");
+      }
 
-        const response = await api.get("/logs/analytics");
-        setAnalytics(response.data);
-      } catch (error) {
-        console.error("Failed to fetch analytics:", error);
+      const [logsResult, analyticsResult] = await Promise.allSettled([
+        api.get("/logs/search"),
+        api.get("/logs/analytics"),
+      ]);
+
+      if (!active) return;
+
+      if (logsResult.status === "fulfilled") {
+        setRecentLogs((logsResult.value.data.logs ?? []).slice(0, 8));
+      } else {
+        console.error("Failed to fetch logs:", logsResult.reason);
+        setLogsError("Could not load logs. Please try again.");
+      }
+
+      if (analyticsResult.status === "fulfilled") {
+        setAnalytics(analyticsResult.value.data);
+      } else {
+        console.error("Failed to fetch analytics:", analyticsResult.reason);
         setAnalyticsError("Could not load analytics.");
-      } finally {
+      }
+
+      if (showLoading && active) {
+        setLoadingLogs(false);
         setLoadingAnalytics(false);
       }
     };
 
-    fetchDashboardData();
+    // Initial dashboard load
+    fetchDashboardData(true);
+
+    // Refresh dashboard whenever a new log is received
+    const handleNewLog = () => {
+      console.log("New log received. Refreshing dashboard...");
+      fetchDashboardData();
+    };
+
+    socket.on("new-log", handleNewLog);
+
+    return () => {
+      active = false;
+      socket.off("new-log", handleNewLog);
+    };
   }, []);
 
   return (

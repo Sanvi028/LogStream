@@ -5,6 +5,7 @@ import FilterBar from "../components/logs/FilterBar";
 import LogTable from "../components/logs/LogTable";
 import LogDetailModal from "../components/logs/LogDetailModal";
 import api from "../lib/api";
+import { socket } from "../lib/socket";
 import type { LogEntry, LogFilters } from "../types/log";
 
 const PAGE_SIZE = 10;
@@ -21,30 +22,25 @@ export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchLogs = async () => {
+    const fetchLogs = async (showLoading = true) => {
       try {
-        setLoading(true);
+        if (showLoading && !cancelled) {
+          setLoading(true);
+        }
+
         setError("");
 
         const params: Record<string, string> = {};
-
         const search = filters.search?.trim();
 
-        if (search) {
-          params.query = search;
-        }
-
-        if (filters.service) {
-          params.service = filters.service;
-        }
-
-        if (filters.level) {
-          params.level = filters.level;
-        }
+        if (search) params.query = search;
+        if (filters.service) params.service = filters.service;
+        if (filters.level) params.level = filters.level;
 
         const response = await api.get("/logs/search", { params });
 
@@ -59,7 +55,7 @@ export default function LogsPage() {
           setLogs([]);
         }
       } finally {
-        if (!cancelled) {
+        if (showLoading && !cancelled) {
           setLoading(false);
         }
       }
@@ -70,7 +66,21 @@ export default function LogsPage() {
     return () => {
       cancelled = true;
     };
-  }, [filters.search, filters.service, filters.level]);
+  }, [filters.search, filters.service, filters.level, refreshKey]);
+
+  // Listen for new logs and refresh the current filtered results.
+  useEffect(() => {
+    const handleNewLog = () => {
+      console.log("New log received. Refreshing logs...");
+      setRefreshKey((current) => current + 1);
+    };
+
+    socket.on("new-log", handleNewLog);
+
+    return () => {
+      socket.off("new-log", handleNewLog);
+    };
+  }, []);
 
   const page = filters.page || 1;
   const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE));
@@ -118,7 +128,7 @@ export default function LogsPage() {
           <div className="py-8 text-center">
             <p className="text-sm text-red-400">{error}</p>
             <button
-              onClick={() => setFilters({ ...filters })}
+              onClick={() => setRefreshKey((current) => current + 1)}
               className="mt-3 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-900"
             >
               Retry
